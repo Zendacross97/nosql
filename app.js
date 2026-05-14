@@ -5,9 +5,24 @@ const mongoConnect = require (`./util/database`).mongoConnect;
 
 app.use(express.urlencoded({ extended: true }));
 
-const adminRoutes = require("./routes/admin");
+const User = require('./models/user');
 
-app.use('/admin', adminRoutes);
+const productRoutes = require("./routes/product");
+const userRoutes = require('./routes/user');
+const cartRoutes = require('./routes/cart');
+
+app.use((req, res, next) => {
+    User.findUserById('6a06201f277f3e486f3515e0') //login - shortcut
+    .then(user => {
+        req.user = new User (user.name, user.email, user.cart, user._id);
+        next();
+    })
+    .catch(err => console.log(err));
+})
+
+app.use('/product', productRoutes);
+app.use('/user', userRoutes);
+app.use('/cart', cartRoutes);
 
 mongoConnect(() => {
     app.listen(process.env.PORT);
