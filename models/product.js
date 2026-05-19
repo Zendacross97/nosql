@@ -1,73 +1,33 @@
-const mongodb = require('mongodb');
-const getDb = require (`../util/database`).getDb;
+const mongoose = require('mongoose');
 
-class Product {
-    constructor(title, price, description, imageUrl, id, userId) {
-        this.title = title;
-        this.price = price;
-        this.description = description;
-        this.imageUrl = imageUrl;
-        this._id = id? new mongodb.ObjectId(id): null; // otherwise it will create undefined object everytime
-        this.userId = userId;
-    }
-    save() {
-        const db = getDb();
-        let dbOp;
-        if (this._id) {
-            dbOp = db.collection('products').updateOne(
-                { _id: this._id }, 
-                { $set: this } // {set: this} includes evry property of constrctr
-            );
-        } else {
-            dbOp = db.collection('products').insertOne(this);
-        }
-        return dbOp
-        .then(result => {
-            console.log(result);
-            return {_id: result.insertedId  ,...this};
-        })
-        .catch(err => {
-            console.log(err);
-        });
-    };
-    static fetchAll() {
-        const db = getDb();
-        return db.collection('products').find().toArray()
-        .then(products => {
-            console.log(products);
-            return products;
-        })
-        .catch(err => {
-            console.log(err);
-        });
-    }
-    static findById(prodId) {
-        const db = getDb();
-        return db.collection('products').find({_id: new mongodb.ObjectId(prodId)})
-        .next()
-        .then(product => {
-            console.log(product);
-            return product;
-        })
-        .catch(err => {
-            console.log(err);
-        });
-    }
-    static deleteById(prodId) {
-        const db = getDb();
-        return db.collection('products').deleteOne({_id: new mongodb.ObjectId(prodId)})
-        .then(product => {
-            console.log(product);
-            return {_id: product.deletedId  ,...this};
-        })
-        .catch(err => {
-            console.log(err);
-        });
-    }
-}
+const productSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: true,
+      trim: true, // removes extra spaces
+    },
+    price: {
+      type: Number,
+      required: true,
+      min: 0, // basic validation
+    },
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    imageUrl: {
+      type: String,
+      required: true,
+    },
+  },
+  {
+    timestamps: true, // adds createdAt and updatedAt automatically
+  }
+);
 
-module.exports = Product;
-
+module.exports = mongoose.model('Product', productSchema);
 
 // ### 🔎 Why `new mongodb.ObjectId(prodId)` is needed
 // - In MongoDB, the default `_id` field is not a plain string.  
