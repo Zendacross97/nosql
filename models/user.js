@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Order = require('./order');
 
 const userSchema = new mongoose.Schema(
   {
@@ -30,6 +31,9 @@ const userSchema = new mongoose.Schema(
         },
       ],
     },
+    order: {
+      items: []
+    }
   },
   {
     timestamps: true, // adds createdAt and updatedAt automatically
@@ -59,6 +63,41 @@ userSchema.methods.deleteItemFromCart = async function (prodId) {
     item => item.productId.toString() !== prodId.toString()
   );
   return this.save();
+};
+
+userSchema.methods.addOrder = async function () {
+  // populate cart items with product details
+  await this.populate('cart.items.productId');
+
+  const orderItems = this.cart.items.map(item => {
+  const {title, price, description, imageUrl } = item.productId;
+  return {
+    product: { title, price, description, imageUrl },
+    quantity: item.quantity,
+  };
+});
+
+  const order = new Order({
+    items: orderItems,
+    user: {
+      _id: this._id,
+      name: this.name,
+      email: this.email,
+    },
+  });
+
+  await order.save();
+
+  // clear cart
+  this.cart = { items: [] };
+  await this.save();
+
+  return order.items;
+};
+
+userSchema.methods.getOrders = async function () {
+  const orders = await Order.find({ 'user._id': this._id });
+  return orders[0].items;
 };
 
 module.exports = mongoose.model('User', userSchema);
